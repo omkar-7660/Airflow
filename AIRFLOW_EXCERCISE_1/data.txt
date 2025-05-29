@@ -1,0 +1,6 @@
+Hello world! This is a sample text file.
+This file is used to demonstrate word counting.
+Word counting is a common task in data processing.
+Data processing involves counting words, among other tasks.
+Hello again! This is another line in the sample text file.
+Counting words is fun and useful.
