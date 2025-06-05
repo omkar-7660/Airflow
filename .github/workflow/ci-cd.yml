@@ -1,0 +1,66 @@
+name: Flight Booking CICD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  upload-to-prod:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout the repository
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Authenticate to GCP
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Setup Google Cloud SDK
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # Upload `variables.json` to Composer bucket
+      #Here, we are uploading the variables.json file to the data folder of the airflow-dev composer
+      #here dev folder is not available in the bucket, so it will be created automatically
+
+
+      - name: Upload Variables JSON to GCS
+        run: |
+          gsutil cp Assignment_1/Variables/prod/variables.json gs://us-central1-airflow-prod-a8932bed-bucket/data/prod/variables.json
+
+      # Import Variables into Airflow-prod
+      #Below if you see the path used for importing the variables.json file is not the same as the one
+      #we used for uploading the file to the bucket, this is because the path used for importing
+      #the variables.json file is the ultimatly the GC bucket path but under the home directory of airflow.
+      #It does mean that the original google cloud bucket path is mounted to the home directory of airflow.
+      # Indirectly, we are importing the variables.json file from the home directory of airflow.
+      # This imported variables you can us them into the airflow DAGs. Previously we were doing manually
+      # by using the Airflow UI Admin -> Variables section.
+      # Now, we are automating this process by using the gcloud command.
+
+      - name: Import Variables into Airflow-prod
+        run: |
+          gcloud composer environments run airflow-prod \
+            --location us-central1 \
+            variables import -- /home/airflow/gcs/data/prod/variables.json
+
+      # Sync Spark job to GCS
+      - name: Upload Spark Job to GCS
+        run: |
+          gsutil cp spark_job/spark_hive_job.py gs://airflow_project_omtech/Assignment_1/spark_job/spark_hive_job.py
+
+      # Sync Airflow DAG to Airflow prod Composer
+      - name: Upload Airflow DAG to prod
+        run: |
+          gcloud composer environments storage dags import \
+            --environment airflow-prod \
+            --location us-central1 \
+            --source airflow/airflow_job.py
