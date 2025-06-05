@@ -6,7 +6,7 @@ def main():
     spark= SparkSession.builder \
         .appName("GCS to Hive") \
         .config("spark.sql.warehouse.dir", "gs://airflow_project_omtech/Assignment_1/hive_data/") \
-        .enableHiveSuppoer() \
+        .enableHiveSupport() \
         .getOrCreate()
     
 
